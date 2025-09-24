@@ -1,111 +1,231 @@
-# ⚔️ Blade Ball Script - Ultimate Enhancement Loader 🚀
+-- Roblox Lua Script: Auto Teleport com 3 cliques e delay ajustável até 10000ms
 
-Welcome to the most comprehensive and fully-featured Blade Ball script solution for 2025! Supercharge your gameplay with robust, safe, and versatile scripts that revolutionize your Blade Ball experience. Our Loader is a user-friendly and cross-platform script loader crafted for efficiency, performance, and customization. Dive into seamless enhancements regardless of your operating system! ✨
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
----
+-- GUI principal
+local gui = Instance.new("ScreenGui")
+gui.Name = "TeleportGUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = playerGui
 
-## 🎮 What is Blade Ball Script? 🔥
+local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
-Blade Ball Script is a powerhouse for players seeking to elevate their Blade Ball (Roblox) gameplay. Featuring robust automation, performance boosts, custom in-game actions, and secure SYNTAX, our loader script empowers you to:
+-- Lista de teleportes
+local teleports = {
+    {name = "Condenada 1", pos = Vector3.new(4253.15, 29.67, -6964.59)},
+    {name = "Condenada 2", pos = Vector3.new(4299.07, 44.31, -6897.23)},
+    {name = "Condenada 3", pos = Vector3.new(4345.58, 74.50, -7019.68)},
+    {name = "Condenada 4", pos = Vector3.new(4437.02, 95.86, -6966.37)},
+    {name = "Condenada 5", pos = Vector3.new(4499.72, 104.85, -7015.65)},
+    {name = "Condenada 6", pos = Vector3.new(4450.35, 106.52, -7039.21)},
+    {name = "Condenada 7", pos = Vector3.new(4398.37, 85.95, -6977.11)},
+    {name = "Condenada 8", pos = Vector3.new(4346.50, 71.56, -7018.40)},
+    {name = "Condenada 9", pos = Vector3.new(4305.84, 43.87, -6898.48)},
+    {name = "Condenada 10", pos = Vector3.new(4260.06, 27.13, -6960.53)},
+    {name = "Condenada 11", pos = Vector3.new(4192.87, 21.01, -6990.53)}
+}
 
-- Automate repetitive tasks
-- Unlock performance mods
-- Trigger exclusive in-game actions 
-- Easily toggle advanced settings
-- Achieve smoother gaming on ALL supported OS
+-- Painel principal
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0,260,0,60)
+frame.Position = UDim2.new(0.5,-130,0.7,0)
+frame.AnchorPoint = Vector2.new(0.5,0)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.BackgroundTransparency = 0.15
+frame.BorderSizePixel = 0
+frame.ClipsDescendants = true
+frame.Parent = gui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
 
-Whether you are a casual player or competitive enthusiast, our loader brings advanced capabilities within a few clicks!
+-- Título
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,-50,0,28)
+title.Position = UDim2.new(0,6,0,6)
+title.BackgroundTransparency = 1
+title.Text = "Teleporte — Escolha"
+title.TextScaled = true
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.SourceSansSemibold
+title.Parent = frame
 
----
+-- Botão abrir/fechar
+local openBtn = Instance.new("TextButton")
+openBtn.Size = UDim2.new(0,36,0,36)
+openBtn.Position = UDim2.new(1,-42,0,12)
+openBtn.AnchorPoint = Vector2.new(1,0)
+openBtn.Text = "+"
+openBtn.Font = Enum.Font.SourceSansBold
+openBtn.TextScaled = true
+openBtn.BackgroundTransparency = 0.1
+openBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+openBtn.TextColor3 = Color3.new(1,1,1)
+openBtn.Parent = frame
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0,8)
 
-## 🛠️ Installation Guide 🛠️
+-- ScrollingFrame
+local listFrame = Instance.new("ScrollingFrame")
+listFrame.Size = UDim2.new(1,0,0,350)
+listFrame.Position = UDim2.new(0,0,0,60)
+listFrame.BackgroundTransparency = 1
+listFrame.BorderSizePixel = 0
+listFrame.ScrollBarThickness = 6
+listFrame.Visible = false
+listFrame.Parent = frame
+listFrame.CanvasSize = UDim2.new(0,0,0,#teleports*46 + 150)
+local layout = Instance.new("UIListLayout", listFrame)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0,6)
 
-Getting started is super simple—no coding knowledge required!
+-- Teleporte (com cadeira)
+local function teleportTo(pos)
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid.SeatPart then
+        local seat = humanoid.SeatPart
+        TweenService:Create(seat, tweenInfo, {CFrame = CFrame.new(pos + Vector3.new(0,3,0))}):Play()
+    else
+        TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(pos + Vector3.new(0,3,0))}):Play()
+    end
+end
 
-1. Download **Loader.rar** from the repository.  
-2. Extract Loader.rar into your preferred folder using any modern archiving tool.  
-3. Launch the Loader executable suitable for your OS (check table below).  
-4. Follow on-screen instructions for script customization and launch Blade Ball!  
-5. Enjoy the enhanced gaming experience!
+-- Auto Teleport
+local autoTeleporting = false
+local autoDelay = 0.1 -- valor inicial (100ms)
 
-> For detailed installation walkthroughs and troubleshooting tips, check the [Wiki](./wiki) section of this GitHub repository!
+local autoBtn = Instance.new("TextButton")
+autoBtn.Size = UDim2.new(1,-12,0,40)
+autoBtn.Position = UDim2.new(0,6,0,(#teleports*46)+10)
+autoBtn.BackgroundTransparency = 0.08
+autoBtn.BackgroundColor3 = Color3.fromRGB(80,50,50)
+autoBtn.BorderSizePixel = 0
+autoBtn.Text = "Auto Teleport: OFF"
+autoBtn.Font = Enum.Font.SourceSansBold
+autoBtn.TextSize = 18
+autoBtn.TextColor3 = Color3.new(1,1,1)
+autoBtn.Parent = listFrame
+Instance.new("UICorner", autoBtn).CornerRadius = UDim.new(0,8)
 
----
+autoBtn.MouseButton1Click:Connect(function()
+    autoTeleporting = not autoTeleporting
+    autoBtn.Text = "Auto Teleport: "..(autoTeleporting and "ON" or "OFF")
+    if autoTeleporting then
+        task.spawn(function()
+            while autoTeleporting do
+                for _, info in ipairs(teleports) do
+                    if not autoTeleporting then break end
+                    for i = 1, 3 do
+                        teleportTo(info.pos)
+                        task.wait(autoDelay)
+                    end
+                end
+            end
+        end)
+    end
+end)
 
-## 💻 OS Compatibility Table 🗂️
+-- Label para mostrar delay atual
+local delayLabel = Instance.new("TextLabel")
+delayLabel.Size = UDim2.new(1,-12,0,30)
+delayLabel.Position = UDim2.new(0,6,0,(#teleports*46)+60)
+delayLabel.BackgroundTransparency = 1
+delayLabel.Text = "Delay: 100ms"
+delayLabel.Font = Enum.Font.SourceSansBold
+delayLabel.TextSize = 18
+delayLabel.TextColor3 = Color3.new(1,1,1)
+delayLabel.Parent = listFrame
 
-Here’s a clear snapshot of which operating systems our Loader supports:
+-- Botão diminuir
+local minusBtn = Instance.new("TextButton")
+minusBtn.Size = UDim2.new(0.5,-9,0,30)
+minusBtn.Position = UDim2.new(0,6,0,(#teleports*46)+100)
+minusBtn.Text = "- Diminuir"
+minusBtn.Font = Enum.Font.SourceSansBold
+minusBtn.TextSize = 18
+minusBtn.TextColor3 = Color3.new(1,1,1)
+minusBtn.BackgroundColor3 = Color3.fromRGB(80,40,40)
+minusBtn.Parent = listFrame
+Instance.new("UICorner", minusBtn).CornerRadius = UDim.new(0,6)
 
-| 🖥️ Operating System | ⚡ Current Support | 🧰 Requirements      | 🤩 Notes                            |
-|---------------------|-------------------|---------------------|--------------------------------------|
-| Windows 10/11       | ✅ Full           | .NET 4.8+           | Optimal performance on Win11         |
-| macOS (Ventura +)   | ✅ Full           | Python 3.9+, Mono   | Supports M1 and Intel processors     |
-| Ubuntu 20.04+       | ✅ Full           | Python 3.8+, Wine   | Use Wine for compatibility           |
-| Fedora 36+          | ✅ Full           | Python 3.9+, Mono   | Use Flatpak or native Python         |
-| Arch Linux          | ✅ Full           | Python 3.8+, Mono   | Rolling updates supported            |
-| Steam Deck          | ✅ Partial        | Desktop Mode        | Best with external keyboard/mouse    |
-| Android (via VM)    | ⚠️ Partial        | Termux + VM         | Experimental, not officially stable  |
-| iOS                 | ❌ Not Supported  | N/A                 | Security limitation by Apple         |
+-- Botão aumentar
+local plusBtn = Instance.new("TextButton")
+plusBtn.Size = UDim2.new(0.5,-9,0,30)
+plusBtn.Position = UDim2.new(0.5,3,0,(#teleports*46)+100)
+plusBtn.Text = "+ Aumentar"
+plusBtn.Font = Enum.Font.SourceSansBold
+plusBtn.TextSize = 18
+plusBtn.TextColor3 = Color3.new(1,1,1)
+plusBtn.BackgroundColor3 = Color3.fromRGB(40,80,40)
+plusBtn.Parent = listFrame
+Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0,6)
 
----
+-- Funções de ajuste
+local function updateDelayLabel()
+    delayLabel.Text = "Delay: "..math.floor(autoDelay*1000).."ms"
+end
 
-## 🎉 Feature List & Function Descriptions 📝
+minusBtn.MouseButton1Click:Connect(function()
+    autoDelay = math.max(0, autoDelay - 0.1) -- tira 100ms
+    updateDelayLabel()
+end)
 
-Blade Ball Script Loader is packed with powerful features, each designed with the player in mind:
+plusBtn.MouseButton1Click:Connect(function()
+    autoDelay = math.min(10, autoDelay + 0.1) -- até 10000ms
+    updateDelayLabel()
+end)
 
-| 🆕 Feature            | 🎯 Function Description                                                                                    |
-|----------------------|-----------------------------------------------------------------------------------------------------------|
-| Auto-Farm            | Automates coin and XP farming, boosting progress and unlocking rewards 24/7 without manual intervention.   |
-| Anti-Kick            | Prevents instant-kick by server anti-cheat, ensures uninterrupted gaming sessions.                         |
-| Ball Teleport        | Instantly moves the blade ball to any map point, allowing advanced trick shots and positioning.            |
-| Hitbox Expander      | Expands hitbox detection for increased accuracy and reliability in every match.                            |
-| Kill Aura            | Automated knockouts within a defined radius, effective for defensive and offensive strategies.             |
-| Auto-Ability         | Auto-triggers special abilities on cooldown, perfect timing for maximal in-game performance.               |
-| Custom GUI           | Modern, collapsible script interface integrated directly into your Blade Ball HUD; adjustable color themes. |
-| Safe Mode            | Limits script actions to bypass common anti-cheat systems for safer usage.                                 |
-| FPS Booster          | Optimizes game settings and memory management to achieve higher frame rates, even on older hardware.       |
-| One-Click Update     | Checks for script updates from this repository and applies them instantly, no manual copying required.     |
+updateDelayLabel()
 
-> 🏆 All features are regularly tested and updated for Blade Ball’s latest patch releases in 2025!
+-- Abrir/fechar painel
+local open = false
+openBtn.MouseButton1Click:Connect(function()
+    open = not open
+    if open then
+        TweenService:Create(frame, TweenInfo.new(0.25), {Size=UDim2.new(0,260,0,420)}):Play()
+        listFrame.Visible = true
+        openBtn.Text = "×"
+    else
+        TweenService:Create(frame, TweenInfo.new(0.25), {Size=UDim2.new(0,260,0,60)}):Play()
+        task.delay(0.26,function() listFrame.Visible = false end)
+        openBtn.Text = "+"
+    end
+end)
 
----
-
-## 🔎 SEO-Optimized Keywords
-
-- Blade Ball script loader
-- Blade Ball automation
-- Roblox Blade Ball enhancements
-- Blade Ball hack / mod tool
-- Universal script executer for Blade Ball
-- Blade Ball anti-kick, hitbox expander, ball teleport
-- Safe Blade Ball scripting for 2025
-- Cross-platform Blade Ball scripts (Windows, macOS, Linux)
-
----
-
-## ⚠️ Disclaimer
-
-This repository is provided solely for educational and research purposes.  
-Usage of scripts or mods may violate the terms of service of Blade Ball/Roblox and could lead to account suspension or bans.  
-The maintainers and contributors do **not** condone unfair gameplay or misuse.  
-Always comply with game guidelines and local laws.  
-Scripts are offered as-is, without warranty or guarantees of any sort.
-
----
-
-## 📄 MIT License
-
-Feel free to fork, contribute, report issues, and suggest features!
-This software is licensed under the [MIT License](https://opensource.org/licenses/MIT) - you’re free to use and modify it, even in commercial projects, as long as you retain the license notice.
-
----
-
-## 💬 Community & Support
-
-Join our growing community for support, tips, and updates!
-
-- Open issues here for bug reports or help
-- Check the Discussions page for tips and tricks
-- Collaborate with fellow Blade Ball enthusiasts
-
-Stay sharp and game on! ⚔️
+-- Drag
+local dragging, dragStart, startPos
+local function updateDrag(input)
+    if dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            0, math.clamp(startPos.X.Offset + delta.X,0,gui.AbsoluteSize.X - frame.Size.X.Offset),
+            0, math.clamp(startPos.Y.Offset + delta.Y,0,gui.AbsoluteSize.Y - frame.Size.Y.Offset)
+        )
+    end
+end
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
+                dragging = false
+            end
+        end)
+    end
+end)
+frame.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
+        updateDrag(input)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
+        updateDrag(input)
+    end
+end)
