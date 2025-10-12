@@ -1,22 +1,16 @@
--- Roblox Lua Script: Auto Teleport com 3 cliques e delay ajustável até 10000ms
-
+-- LocalScript dentro de StarterPlayerScripts
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local mouse = player:GetMouse()
+local uis = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
--- GUI principal
-local gui = Instance.new("ScreenGui")
-gui.Name = "TeleportGUI"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.Parent = playerGui
+-- Variáveis do Auto Teleport
+local autoTeleporting = false
+local autoDelay = 0.5 -- meio segundo entre cada clique
 
-local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
--- Lista de teleportes
-local teleports = {
+-- Primeiro sistema de teleportes (11 locais)
+local teleports1 = {
     {name = "Condenada 1", pos = Vector3.new(4253.15, 29.67, -6964.59)},
     {name = "Condenada 2", pos = Vector3.new(4299.07, 44.31, -6897.23)},
     {name = "Condenada 3", pos = Vector3.new(4345.58, 74.50, -7019.68)},
@@ -30,62 +24,165 @@ local teleports = {
     {name = "Condenada 11", pos = Vector3.new(4192.87, 21.01, -6990.53)}
 }
 
--- Painel principal
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,260,0,60)
-frame.Position = UDim2.new(0.5,-130,0.7,0)
-frame.AnchorPoint = Vector2.new(0.5,0)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-frame.BackgroundTransparency = 0.15
-frame.BorderSizePixel = 0
-frame.ClipsDescendants = true
-frame.Parent = gui
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
+-- Segundo sistema de teleportes (4 locais)
+local teleports2 = {
+    {name = "Local 1", pos = Vector3.new(4009.78, 21.37, -6705.96)},
+    {name = "Local 2", pos = Vector3.new(4125.84, 37.00, -6733.84)},
+    {name = "Local 3", pos = Vector3.new(4124.55, 21.37, -6744.80)},
+    {name = "Local 4", pos = Vector3.new(3953.47, 21.00, -6689.76)}
+}
 
--- Título
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1,-50,0,28)
-title.Position = UDim2.new(0,6,0,6)
-title.BackgroundTransparency = 1
-title.Text = "Teleporte — Escolha"
+-- Variável para controlar qual sistema está ativo
+local currentTeleportSystem = teleports1
+
+-- GUI Criada via script
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "AdminGUI"
+screenGui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 320, 0, 450)
+frame.Position = UDim2.new(0.5, -160, 0.5, -225)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Active = true
+frame.Draggable = true
+frame.Visible = false
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 50)
+title.Text = "👑 Painel ADM - Teleports"
 title.TextScaled = true
-title.TextColor3 = Color3.new(1,1,1)
-title.Font = Enum.Font.SourceSansSemibold
-title.Parent = frame
+title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.FredokaOne
 
--- Botão abrir/fechar
-local openBtn = Instance.new("TextButton")
-openBtn.Size = UDim2.new(0,36,0,36)
-openBtn.Position = UDim2.new(1,-42,0,12)
-openBtn.AnchorPoint = Vector2.new(1,0)
-openBtn.Text = "+"
-openBtn.Font = Enum.Font.SourceSansBold
-openBtn.TextScaled = true
-openBtn.BackgroundTransparency = 0.1
-openBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-openBtn.TextColor3 = Color3.new(1,1,1)
-openBtn.Parent = frame
-Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0,8)
+-- ========== SELEÇÃO DE SISTEMA ==========
 
--- ScrollingFrame
-local listFrame = Instance.new("ScrollingFrame")
-listFrame.Size = UDim2.new(1,0,0,350)
-listFrame.Position = UDim2.new(0,0,0,60)
-listFrame.BackgroundTransparency = 1
-listFrame.BorderSizePixel = 0
-listFrame.ScrollBarThickness = 6
-listFrame.Visible = false
-listFrame.Parent = frame
-listFrame.CanvasSize = UDim2.new(0,0,0,#teleports*46 + 150)
-local layout = Instance.new("UIListLayout", listFrame)
+local systemLabel = Instance.new("TextLabel", frame)
+systemLabel.Size = UDim2.new(0.8, 0, 0, 25)
+systemLabel.Position = UDim2.new(0.1, 0, 0.12, 0)
+systemLabel.Text = "Sistema de Teleporte:"
+systemLabel.TextScaled = true
+systemLabel.BackgroundTransparency = 1
+systemLabel.TextColor3 = Color3.new(1, 1, 1)
+systemLabel.Font = Enum.Font.GothamBold
+
+local system1Btn = Instance.new("TextButton", frame)
+system1Btn.Size = UDim2.new(0.35, 0, 0, 30)
+system1Btn.Position = UDim2.new(0.1, 0, 0.17, 0)
+system1Btn.Text = "11 Locais"
+system1Btn.TextScaled = true
+system1Btn.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
+system1Btn.TextColor3 = Color3.new(1, 1, 1)
+system1Btn.Font = Enum.Font.GothamBold
+
+local system2Btn = Instance.new("TextButton", frame)
+system2Btn.Size = UDim2.new(0.35, 0, 0, 30)
+system2Btn.Position = UDim2.new(0.55, 0, 0.17, 0)
+system2Btn.Text = "4 Locais"
+system2Btn.TextScaled = true
+system2Btn.BackgroundColor3 = Color3.fromRGB(80, 60, 60)
+system2Btn.TextColor3 = Color3.new(1, 1, 1)
+system2Btn.Font = Enum.Font.GothamBold
+
+-- ========== SISTEMA AUTO TELEPORT ==========
+
+-- Título do Teleport
+local teleportTitle = Instance.new("TextLabel", frame)
+teleportTitle.Size = UDim2.new(0.8, 0, 0, 25)
+teleportTitle.Position = UDim2.new(0.1, 0, 0.25, 0)
+teleportTitle.Text = "🔗 Auto Teleport"
+teleportTitle.TextScaled = true
+teleportTitle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+teleportTitle.TextColor3 = Color3.new(1, 1, 1)
+teleportTitle.Font = Enum.Font.GothamBold
+
+-- Botão Auto Teleport
+local autoTeleportBtn = Instance.new("TextButton", frame)
+autoTeleportBtn.Size = UDim2.new(0.8, 0, 0, 40)
+autoTeleportBtn.Position = UDim2.new(0.1, 0, 0.32, 0)
+autoTeleportBtn.Text = "Auto Teleport: OFF"
+autoTeleportBtn.TextScaled = true
+autoTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 50, 50)
+autoTeleportBtn.TextColor3 = Color3.new(1, 1, 1)
+autoTeleportBtn.Font = Enum.Font.GothamBold
+
+-- Status do Delay
+local delayLabel = Instance.new("TextLabel", frame)
+delayLabel.Size = UDim2.new(0.8, 0, 0, 25)
+delayLabel.Position = UDim2.new(0.1, 0, 0.4, 0)
+delayLabel.Text = "Delay: 500ms"
+delayLabel.TextScaled = true
+delayLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+delayLabel.TextColor3 = Color3.new(1, 1, 1)
+delayLabel.Font = Enum.Font.Gotham
+
+-- Botões de controle do delay
+local delayControls = Instance.new("Frame", frame)
+delayControls.Size = UDim2.new(0.8, 0, 0, 30)
+delayControls.Position = UDim2.new(0.1, 0, 0.45, 0)
+delayControls.BackgroundTransparency = 1
+
+local minusBtn = Instance.new("TextButton", delayControls)
+minusBtn.Size = UDim2.new(0.45, 0, 1, 0)
+minusBtn.Position = UDim2.new(0, 0, 0, 0)
+minusBtn.Text = "- Diminuir"
+minusBtn.TextScaled = true
+minusBtn.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+minusBtn.TextColor3 = Color3.new(1, 1, 1)
+minusBtn.Font = Enum.Font.GothamBold
+
+local plusBtn = Instance.new("TextButton", delayControls)
+plusBtn.Size = UDim2.new(0.45, 0, 1, 0)
+plusBtn.Position = UDim2.new(0.55, 0, 0, 0)
+plusBtn.Text = "+ Aumentar"
+plusBtn.TextScaled = true
+plusBtn.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
+plusBtn.TextColor3 = Color3.new(1, 1, 1)
+plusBtn.Font = Enum.Font.GothamBold
+
+-- Lista de locais ativos
+local locationsLabel = Instance.new("TextLabel", frame)
+locationsLabel.Size = UDim2.new(0.8, 0, 0, 25)
+locationsLabel.Position = UDim2.new(0.1, 0, 0.52, 0)
+locationsLabel.Text = "Locais Ativos:"
+locationsLabel.TextScaled = true
+locationsLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+locationsLabel.TextColor3 = Color3.new(1, 1, 1)
+locationsLabel.Font = Enum.Font.GothamBold
+
+-- Frame para lista de locais
+local locationsFrame = Instance.new("ScrollingFrame", frame)
+locationsFrame.Size = UDim2.new(0.8, 0, 0, 150)
+locationsFrame.Position = UDim2.new(0.1, 0, 0.58, 0)
+locationsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+locationsFrame.BorderSizePixel = 0
+locationsFrame.ScrollBarThickness = 6
+
+local layout = Instance.new("UIListLayout", locationsFrame)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Padding = UDim.new(0,6)
+layout.Padding = UDim.new(0, 5)
 
--- Teleporte (com cadeira)
+-- Botão de abrir/fechar
+local toggleButton = Instance.new("TextButton", screenGui)
+toggleButton.Size = UDim2.new(0, 120, 0, 40)
+toggleButton.Position = UDim2.new(0, 10, 0, 10)
+toggleButton.Text = "Abrir Painel"
+toggleButton.TextScaled = true
+toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Font = Enum.Font.GothamBold
+
+-- ========== FUNÇÕES DO AUTO TELEPORT ==========
+
+-- Função Teleporte (suporta cadeira)
 local function teleportTo(pos)
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
     local humanoid = char:FindFirstChildOfClass("Humanoid")
+    
+    local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
     if humanoid.SeatPart then
         local seat = humanoid.SeatPart
         TweenService:Create(seat, tweenInfo, {CFrame = CFrame.new(pos + Vector3.new(0,3,0))}):Play()
@@ -94,138 +191,130 @@ local function teleportTo(pos)
     end
 end
 
--- Auto Teleport
-local autoTeleporting = false
-local autoDelay = 0.1 -- valor inicial (100ms)
+-- Função para atualizar label do delay
+local function updateDelayLabel()
+    delayLabel.Text = "Delay: "..math.floor(autoDelay*1000).."ms"
+end
 
-local autoBtn = Instance.new("TextButton")
-autoBtn.Size = UDim2.new(1,-12,0,40)
-autoBtn.Position = UDim2.new(0,6,0,(#teleports*46)+10)
-autoBtn.BackgroundTransparency = 0.08
-autoBtn.BackgroundColor3 = Color3.fromRGB(80,50,50)
-autoBtn.BorderSizePixel = 0
-autoBtn.Text = "Auto Teleport: OFF"
-autoBtn.Font = Enum.Font.SourceSansBold
-autoBtn.TextSize = 18
-autoBtn.TextColor3 = Color3.new(1,1,1)
-autoBtn.Parent = listFrame
-Instance.new("UICorner", autoBtn).CornerRadius = UDim.new(0,8)
+-- Função para atualizar lista de locais
+local function updateLocationsList()
+    -- Limpar lista atual
+    for _, child in ipairs(locationsFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    -- Adicionar novos botões
+    for i, teleport in ipairs(currentTeleportSystem) do
+        local locButton = Instance.new("TextButton")
+        locButton.Size = UDim2.new(1, -10, 0, 30)
+        locButton.Text = teleport.name
+        locButton.TextScaled = true
+        locButton.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
+        locButton.TextColor3 = Color3.new(1, 1, 1)
+        locButton.Font = Enum.Font.Gotham
+        locButton.Parent = locationsFrame
+        
+        locButton.MouseButton1Click:Connect(function()
+            -- Teleportar para este local 3 vezes
+            for j = 1, 3 do
+                teleportTo(teleport.pos)
+                task.wait(0.1)
+            end
+        end)
+    end
+    
+    -- Ajustar tamanho do canvas
+    locationsFrame.CanvasSize = UDim2.new(0, 0, 0, #currentTeleportSystem * 35)
+end
 
-autoBtn.MouseButton1Click:Connect(function()
+-- Função do Auto Teleport
+local function toggleAutoTeleport()
     autoTeleporting = not autoTeleporting
-    autoBtn.Text = "Auto Teleport: "..(autoTeleporting and "ON" or "OFF")
+    autoTeleportBtn.Text = "Auto Teleport: "..(autoTeleporting and "ON" or "OFF")
+    
     if autoTeleporting then
+        autoTeleportBtn.BackgroundColor3 = Color3.fromRGB(50, 80, 50)
         task.spawn(function()
             while autoTeleporting do
-                for _, info in ipairs(teleports) do
+                for _, info in ipairs(currentTeleportSystem) do
                     if not autoTeleporting then break end
-                    for i = 1, 3 do
+                    -- 3 cliques antes de ir pro próximo
+                    for i=1,3 do
+                        if not autoTeleporting then break end
                         teleportTo(info.pos)
                         task.wait(autoDelay)
                     end
                 end
             end
         end)
+    else
+        autoTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 50, 50)
     end
-end)
-
--- Label para mostrar delay atual
-local delayLabel = Instance.new("TextLabel")
-delayLabel.Size = UDim2.new(1,-12,0,30)
-delayLabel.Position = UDim2.new(0,6,0,(#teleports*46)+60)
-delayLabel.BackgroundTransparency = 1
-delayLabel.Text = "Delay: 100ms"
-delayLabel.Font = Enum.Font.SourceSansBold
-delayLabel.TextSize = 18
-delayLabel.TextColor3 = Color3.new(1,1,1)
-delayLabel.Parent = listFrame
-
--- Botão diminuir
-local minusBtn = Instance.new("TextButton")
-minusBtn.Size = UDim2.new(0.5,-9,0,30)
-minusBtn.Position = UDim2.new(0,6,0,(#teleports*46)+100)
-minusBtn.Text = "- Diminuir"
-minusBtn.Font = Enum.Font.SourceSansBold
-minusBtn.TextSize = 18
-minusBtn.TextColor3 = Color3.new(1,1,1)
-minusBtn.BackgroundColor3 = Color3.fromRGB(80,40,40)
-minusBtn.Parent = listFrame
-Instance.new("UICorner", minusBtn).CornerRadius = UDim.new(0,6)
-
--- Botão aumentar
-local plusBtn = Instance.new("TextButton")
-plusBtn.Size = UDim2.new(0.5,-9,0,30)
-plusBtn.Position = UDim2.new(0.5,3,0,(#teleports*46)+100)
-plusBtn.Text = "+ Aumentar"
-plusBtn.Font = Enum.Font.SourceSansBold
-plusBtn.TextSize = 18
-plusBtn.TextColor3 = Color3.new(1,1,1)
-plusBtn.BackgroundColor3 = Color3.fromRGB(40,80,40)
-plusBtn.Parent = listFrame
-Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0,6)
-
--- Funções de ajuste
-local function updateDelayLabel()
-    delayLabel.Text = "Delay: "..math.floor(autoDelay*1000).."ms"
 end
 
+-- Função para trocar sistema de teleporte
+local function switchTeleportSystem(system)
+    currentTeleportSystem = system
+    
+    if system == teleports1 then
+        system1Btn.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
+        system2Btn.BackgroundColor3 = Color3.fromRGB(80, 60, 60)
+    else
+        system1Btn.BackgroundColor3 = Color3.fromRGB(80, 60, 60)
+        system2Btn.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
+    end
+    
+    updateLocationsList()
+    
+    -- Parar auto teleport se estiver ativo
+    if autoTeleporting then
+        toggleAutoTeleport()
+    end
+end
+
+-- ========== EVENTOS ==========
+
+-- Eventos dos botões de sistema
+system1Btn.MouseButton1Click:Connect(function()
+    switchTeleportSystem(teleports1)
+end)
+
+system2Btn.MouseButton1Click:Connect(function()
+    switchTeleportSystem(teleports2)
+end)
+
+-- Eventos dos botões de delay
 minusBtn.MouseButton1Click:Connect(function()
-    autoDelay = math.max(0, autoDelay - 0.1) -- tira 100ms
+    autoDelay = math.max(0.1, autoDelay - 0.1) -- mínimo 100ms
     updateDelayLabel()
 end)
 
 plusBtn.MouseButton1Click:Connect(function()
-    autoDelay = math.min(10, autoDelay + 0.1) -- até 10000ms
+    autoDelay = math.min(10, autoDelay + 0.1) -- máximo 10000ms
     updateDelayLabel()
 end)
 
-updateDelayLabel()
+-- Evento do botão Auto Teleport
+autoTeleportBtn.MouseButton1Click:Connect(function()
+    toggleAutoTeleport()
+end)
 
--- Abrir/fechar painel
-local open = false
-openBtn.MouseButton1Click:Connect(function()
-    open = not open
-    if open then
-        TweenService:Create(frame, TweenInfo.new(0.25), {Size=UDim2.new(0,260,0,420)}):Play()
-        listFrame.Visible = true
-        openBtn.Text = "×"
+-- Evento do botão toggle
+toggleButton.MouseButton1Click:Connect(function()
+    frame.Visible = not frame.Visible
+    if frame.Visible then
+        toggleButton.Text = "Fechar Painel"
     else
-        TweenService:Create(frame, TweenInfo.new(0.25), {Size=UDim2.new(0,260,0,60)}):Play()
-        task.delay(0.26,function() listFrame.Visible = false end)
-        openBtn.Text = "+"
+        toggleButton.Text = "Abrir Painel"
     end
 end)
 
--- Drag
-local dragging, dragStart, startPos
-local function updateDrag(input)
-    if dragging then
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(
-            0, math.clamp(startPos.X.Offset + delta.X,0,gui.AbsoluteSize.X - frame.Size.X.Offset),
-            0, math.clamp(startPos.Y.Offset + delta.Y,0,gui.AbsoluteSize.Y - frame.Size.Y.Offset)
-        )
-    end
-end
-frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = frame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
-                dragging = false
-            end
-        end)
-    end
-end)
-frame.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
-        updateDrag(input)
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
-        updateDrag(input)
-    end
-end)
+-- ========== INICIALIZAÇÃO ==========
+
+-- Inicializar
+updateDelayLabel()
+switchTeleportSystem(teleports1) -- Sistema 1 como padrão
+
+print("Painel ADM com 2 Sistemas de Teleporte carregado!")
