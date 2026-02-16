@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local VirtualUser = game:InstanceNew("VirtualUser")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -15,6 +16,7 @@ local farmAtivado = false
 local modoAtual = "Desligado"
 local velocidadeFly = 50
 local distanciaMaxima = 300
+local antiAFKAtivado = false
 
 -- NOMES PARA IGNORAR
 local nomesIgnorados = {
@@ -41,6 +43,39 @@ local materiaisIgnorados = {
 local moedasVisitadas = {}
 local tempoCache = 3
 
+-- ========== SISTEMA ANTI-AFK ==========
+local antiAFKConnection
+
+local function ativarAntiAFK()
+    if antiAFKConnection then return end
+    
+    antiAFKConnection = player.Idled:Connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end)
+    
+    Rayfield:Notify({
+        Title = "Anti-AFK Ativado",
+        Content = "Você não será kickado por inatividade",
+        Duration = 3,
+        Image = nil,
+    })
+end
+
+local function desativarAntiAFK()
+    if antiAFKConnection then
+        antiAFKConnection:Disconnect()
+        antiAFKConnection = nil
+    end
+    
+    Rayfield:Notify({
+        Title = "Anti-AFK Desativado",
+        Content = "Sistema anti-AFK foi desligado",
+        Duration = 3,
+        Image = nil,
+    })
+end
+
 -- ========== SISTEMA DE FLY ==========
 local flyConnection
 local flyPart
@@ -65,7 +100,7 @@ local function ativarFly()
     bodyGyro.Parent = humanoidRootPart
     
     flyConnection = RunService.Heartbeat:Connect(function()
-        if not farmAtivado or modoAtual ~= "FlyMM2" then
+        if not farmAtivado or modoAtual ~= "Fly" then
             bodyVelocity.Velocity = Vector3.new(0, 0, 0)
             return
         end
@@ -104,12 +139,10 @@ local function encontrarMoedasProximas()
             local nomeObj = obj.Name
             local nomeLower = string.lower(nomeObj)
             
-            -- FILTRO 1: Nome exato
             if nomesIgnorados[nomeObj] then
                 deveIgnorar = true
             end
             
-            -- FILTRO 2: Nome contém palavras proibidas
             if string.find(nomeLower, "bound") or 
                string.find(nomeLower, "node") or
                string.find(nomeLower, "shop") or
@@ -120,17 +153,14 @@ local function encontrarMoedasProximas()
                 deveIgnorar = true
             end
             
-            -- FILTRO 3: Parent proibido
             if obj.Parent and parentsIgnorados[obj.Parent.Name] then
                 deveIgnorar = true
             end
             
-            -- FILTRO 4: Material proibido
             if materiaisIgnorados[obj.Material] then
                 deveIgnorar = true
             end
             
-            -- FILTRO 5: Parent contém "CompetitiveRace"
             if obj.Parent then
                 local parentLower = string.lower(obj.Parent.Name)
                 if string.find(parentLower, "competitiverace") then
@@ -233,7 +263,7 @@ local function loopFarmPrincipal()
                 teleportModo2(maisProxima)
                 task.wait(0.1)
                 
-            elseif modoAtual == "FlyMM2" then
+            elseif modoAtual == "Fly" then
                 voarParaMoeda(maisProxima)
             end
         else
@@ -257,7 +287,7 @@ end)
 local Window = Rayfield:CreateWindow({
     Name = "💰 Farm de Moedas",
     LoadingTitle = "Farm de Moedas",
-    LoadingSubtitle = "by Buenos días, Francisco",
+    LoadingSubtitle = "by Você",
     ConfigurationSaving = {
         Enabled = false,
     },
@@ -272,10 +302,10 @@ local MainTab = Window:CreateTab("🏠 Principal", nil)
 
 local StatusSection = MainTab:CreateSection("📊 Status")
 
--- Label de Status
 local StatusLabel = MainTab:CreateLabel("Status: 🔴 Desligado")
 local ModoLabel = MainTab:CreateLabel("Modo: Nenhum")
 local MoedasLabel = MainTab:CreateLabel("Moedas Encontradas: 0")
+local AntiAFKLabel = MainTab:CreateLabel("Anti-AFK: 🔴 Desligado")
 
 -- Atualizar labels
 spawn(function()
@@ -295,7 +325,6 @@ local BotaoTeleport1 = ModosTab:CreateButton({
     Name = "⚡ Teleport Modo 1 (Rápido)",
     Callback = function()
         if modoAtual == "Teleport1" and farmAtivado then
-            -- Desligar
             farmAtivado = false
             desativarFly()
             modoAtual = "Desligado"
@@ -308,9 +337,8 @@ local BotaoTeleport1 = ModosTab:CreateButton({
                 Image = nil,
             })
         else
-            -- Ligar
             farmAtivado = false
-            desativarFlyMM2()
+            desativarFly()
             modoAtual = "Teleport1"
             farmAtivado = true
             StatusLabel:Set("Status: 🟢 Ativo")
@@ -361,10 +389,10 @@ local BotaoTeleport2 = ModosTab:CreateButton({
 })
 
 -- Botão Fly
-local BotaoFlyMM2 = ModosTab:CreateButton({
-    Name = " Fly (Voa Suave)",
+local BotaoFly = ModosTab:CreateButton({
+    Name = "✈️ Fly (Voa Suave)",
     Callback = function()
-        if modoAtual == "FlyMM2" and farmAtivado then
+        if modoAtual == "Fly" and farmAtivado then
             farmAtivado = false
             desativarFly()
             modoAtual = "Desligado"
@@ -387,7 +415,7 @@ local BotaoFlyMM2 = ModosTab:CreateButton({
             spawn(loopFarmPrincipal)
             Rayfield:Notify({
                 Title = "Farm Ativado",
-                Content = "Fly ligado (👍)",
+                Content = "Fly ligado (movimento suave)",
                 Duration = 3,
                 Image = nil,
             })
@@ -436,6 +464,43 @@ local DistanciaSlider = ConfigTab:CreateSlider({
     end,
 })
 
+-- ========== TAB UTILITÁRIOS ==========
+local UtilTab = Window:CreateTab("🛠️ Utilitários", nil)
+
+local UtilSection = UtilTab:CreateSection("Ferramentas")
+
+-- Toggle Anti-AFK
+local AntiAFKToggle = UtilTab:CreateToggle({
+    Name = "🔄 Anti-AFK",
+    CurrentValue = false,
+    Flag = "AntiAFK",
+    Callback = function(Value)
+        antiAFKAtivado = Value
+        
+        if Value then
+            ativarAntiAFK()
+            AntiAFKLabel:Set("Anti-AFK: 🟢 Ligado")
+        else
+            desativarAntiAFK()
+            AntiAFKLabel:Set("Anti-AFK: 🔴 Desligado")
+        end
+    end,
+})
+
+-- Botão Limpar Cache
+local BotaoLimparCache = UtilTab:CreateButton({
+    Name = "🗑️ Limpar Cache de Moedas",
+    Callback = function()
+        moedasVisitadas = {}
+        Rayfield:Notify({
+            Title = "Cache Limpo",
+            Content = "Todas as moedas podem ser coletadas novamente",
+            Duration = 3,
+            Image = nil,
+        })
+    end,
+})
+
 -- ========== TAB DE INFO ==========
 local InfoTab = Window:CreateTab("ℹ️ Informações", nil)
 
@@ -457,8 +522,8 @@ InfoTab:CreateLabel("")
 InfoTab:CreateLabel("🎯 Modo 2: Teleporte em círculo")
 InfoTab:CreateLabel("   → 5 posições ao redor, mais eficiente")
 InfoTab:CreateLabel("")
-InfoTab:CreateLabel("✈️ Fly MM2: Voa suave até moeda")
-InfoTab:CreateLabel("   → Movimento natural estilo Murder Mystery")
+InfoTab:CreateLabel("✈️ Fly: Voa suave até moeda")
+InfoTab:CreateLabel("   → Movimento natural e fluido")
 
 -- Botão Desligar Tudo
 local DesligarSection = InfoTab:CreateSection("🔴 Controles")
@@ -500,4 +565,3 @@ Rayfield:Notify({
     Duration = 5,
     Image = nil,
 })
-
