@@ -290,7 +290,7 @@ end)
 local Window = Rayfield:CreateWindow({
     Name = "💰 Farm de Moedas",
     LoadingTitle = "Farm de Moedas",
-    LoadingSubtitle = "by Você",
+    LoadingSubtitle = "by ¯\_(ツ)_/¯",
     ConfigurationSaving = {
         Enabled = false,
     },
@@ -568,3 +568,4 @@ Rayfield:Notify({
     Duration = 5,
     Image = nil,
 })
+
