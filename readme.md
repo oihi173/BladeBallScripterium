@@ -1,6 +1,3 @@
--- Script Farm de Moedas com Interface Rayfield
--- Coloque no StarterGui ou StarterPlayerScripts
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -503,4 +500,3 @@ Rayfield:Notify({
     Duration = 5,
     Image = nil,
 })
-
