@@ -41,11 +41,11 @@ local materiaisIgnorados = {
 local moedasVisitadas = {}
 local tempoCache = 3
 
--- ========== SISTEMA DE FLY MM2 ==========
+-- ========== SISTEMA DE FLY ==========
 local flyConnection
 local flyPart
 
-local function ativarFlyMM2()
+local function ativarFly()
     flyPart = Instance.new("Part")
     flyPart.Size = Vector3.new(2, 1, 2)
     flyPart.Transparency = 1
@@ -75,7 +75,7 @@ local function ativarFlyMM2()
     end)
 end
 
-local function desativarFlyMM2()
+local function desativarFly()
     if flyConnection then
         flyConnection:Disconnect()
         flyConnection = nil
@@ -191,7 +191,7 @@ local function teleportModo2(moeda)
     moedasVisitadas[moeda] = true
 end
 
--- ========== FLY MM2 ==========
+-- ========== FLY ==========
 local function voarParaMoeda(moeda)
     if not moeda or not moeda.Parent or not flyPart then return end
     
@@ -257,7 +257,7 @@ end)
 local Window = Rayfield:CreateWindow({
     Name = "💰 Farm de Moedas",
     LoadingTitle = "Farm de Moedas",
-    LoadingSubtitle = "by Você",
+    LoadingSubtitle = "by Buenos días, Francisco",
     ConfigurationSaving = {
         Enabled = false,
     },
@@ -297,7 +297,7 @@ local BotaoTeleport1 = ModosTab:CreateButton({
         if modoAtual == "Teleport1" and farmAtivado then
             -- Desligar
             farmAtivado = false
-            desativarFlyMM2()
+            desativarFly()
             modoAtual = "Desligado"
             StatusLabel:Set("Status: 🔴 Desligado")
             ModoLabel:Set("Modo: Nenhum")
@@ -332,7 +332,7 @@ local BotaoTeleport2 = ModosTab:CreateButton({
     Callback = function()
         if modoAtual == "Teleport2" and farmAtivado then
             farmAtivado = false
-            desativarFlyMM2()
+            desativarFly()
             modoAtual = "Desligado"
             StatusLabel:Set("Status: 🔴 Desligado")
             ModoLabel:Set("Modo: Nenhum")
@@ -344,7 +344,7 @@ local BotaoTeleport2 = ModosTab:CreateButton({
             })
         else
             farmAtivado = false
-            desativarFlyMM2()
+            desativarFly()
             modoAtual = "Teleport2"
             farmAtivado = true
             StatusLabel:Set("Status: 🟢 Ativo")
@@ -360,34 +360,34 @@ local BotaoTeleport2 = ModosTab:CreateButton({
     end,
 })
 
--- Botão Fly MM2
+-- Botão Fly
 local BotaoFlyMM2 = ModosTab:CreateButton({
-    Name = "✈️ Fly MM2 (Voa Suave)",
+    Name = " Fly (Voa Suave)",
     Callback = function()
         if modoAtual == "FlyMM2" and farmAtivado then
             farmAtivado = false
-            desativarFlyMM2()
+            desativarFly()
             modoAtual = "Desligado"
             StatusLabel:Set("Status: 🔴 Desligado")
             ModoLabel:Set("Modo: Nenhum")
             Rayfield:Notify({
                 Title = "Farm Desativado",
-                Content = "Fly MM2 desligado",
+                Content = "Fly desligado",
                 Duration = 3,
                 Image = nil,
             })
         else
             farmAtivado = false
-            desativarFlyMM2()
-            modoAtual = "FlyMM2"
+            desativarFly()
+            modoAtual = "Fly"
             farmAtivado = true
-            ativarFlyMM2()
+            ativarFly()
             StatusLabel:Set("Status: 🟢 Ativo")
-            ModoLabel:Set("Modo: Fly MM2")
+            ModoLabel:Set("Modo: Fly")
             spawn(loopFarmPrincipal)
             Rayfield:Notify({
                 Title = "Farm Ativado",
-                Content = "Fly MM2 ligado (estilo Murder Mystery)",
+                Content = "Fly ligado (👍)",
                 Duration = 3,
                 Image = nil,
             })
@@ -467,7 +467,7 @@ local BotaoDesligar = InfoTab:CreateButton({
     Name = "🔴 DESLIGAR TUDO",
     Callback = function()
         farmAtivado = false
-        desativarFlyMM2()
+        desativarFly()
         modoAtual = "Desligado"
         StatusLabel:Set("Status: 🔴 Desligado")
         ModoLabel:Set("Modo: Nenhum")
@@ -487,7 +487,7 @@ player.CharacterAdded:Connect(function(newChar)
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
     
     farmAtivado = false
-    desativarFlyMM2()
+    desativarFly()
     modoAtual = "Desligado"
     StatusLabel:Set("Status: 🔴 Desligado")
     ModoLabel:Set("Modo: Nenhum")
@@ -500,3 +500,4 @@ Rayfield:Notify({
     Duration = 5,
     Image = nil,
 })
+
