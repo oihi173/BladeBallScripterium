@@ -1,320 +1,505 @@
--- LocalScript dentro de StarterPlayerScripts
+-- Script Farm de Moedas com Interface Rayfield
+-- Coloque no StarterGui ou StarterPlayerScripts
+
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-local uis = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
--- Variáveis do Auto Teleport
-local autoTeleporting = false
-local autoDelay = 0.5 -- meio segundo entre cada clique
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
--- Primeiro sistema de teleportes (11 locais)
-local teleports1 = {
-    {name = "Condenada 1", pos = Vector3.new(4253.15, 29.67, -6964.59)},
-    {name = "Condenada 2", pos = Vector3.new(4299.07, 44.31, -6897.23)},
-    {name = "Condenada 3", pos = Vector3.new(4345.58, 74.50, -7019.68)},
-    {name = "Condenada 4", pos = Vector3.new(4437.02, 95.86, -6966.37)},
-    {name = "Condenada 5", pos = Vector3.new(4499.72, 104.85, -7015.65)},
-    {name = "Condenada 6", pos = Vector3.new(4450.35, 106.52, -7039.21)},
-    {name = "Condenada 7", pos = Vector3.new(4398.37, 85.95, -6977.11)},
-    {name = "Condenada 8", pos = Vector3.new(4346.50, 71.56, -7018.40)},
-    {name = "Condenada 9", pos = Vector3.new(4305.84, 43.87, -6898.48)},
-    {name = "Condenada 10", pos = Vector3.new(4260.06, 27.13, -6960.53)},
-    {name = "Condenada 11", pos = Vector3.new(4192.87, 21.01, -6990.53)}
+-- ========== CARREGAR RAYFIELD ==========
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- ========== CONFIGURAÇÕES ==========
+local farmAtivado = false
+local modoAtual = "Desligado"
+local velocidadeFly = 50
+local distanciaMaxima = 300
+
+-- NOMES PARA IGNORAR
+local nomesIgnorados = {
+    ["Node"] = true,
+    ["ShopInteractionPart"] = true,
+    ["Bounds"] = true,
+    ["CompetitiveRaceStaminaBoost"] = true,
+    ["CompetitiveRaceSpeedBoost"] = true,
+    ["Bound"] = true,
+    ["SlidePart"] = true,
 }
 
--- Segundo sistema de teleportes (4 locais)
-local teleports2 = {
-    {name = "Local 1", pos = Vector3.new(4009.78, 21.37, -6705.96)},
-    {name = "Local 2", pos = Vector3.new(4125.84, 37.00, -6733.84)},
-    {name = "Local 3", pos = Vector3.new(4124.55, 21.37, -6744.80)},
-    {name = "Local 4", pos = Vector3.new(3953.47, 21.00, -6689.76)}
+-- PARENTS PARA IGNORAR
+local parentsIgnorados = {
+    ["CompetitiveRaceItem"] = true,
 }
 
--- Variável para controlar qual sistema está ativo
-local currentTeleportSystem = teleports1
+-- MATERIAIS PARA IGNORAR
+local materiaisIgnorados = {
+    [Enum.Material.Glass] = true,
+}
 
--- GUI Criada via script
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "AdminGUI"
-screenGui.ResetOnSpawn = false
+-- Cache de moedas visitadas
+local moedasVisitadas = {}
+local tempoCache = 3
 
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 320, 0, 450)
-frame.Position = UDim2.new(0.5, -160, 0.5, -225)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.Active = true
-frame.Draggable = true
-frame.Visible = false
+-- ========== SISTEMA DE FLY MM2 ==========
+local flyConnection
+local flyPart
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 50)
-title.Text = "👑 Painel ADM - Teleports"
-title.TextScaled = true
-title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-title.TextColor3 = Color3.new(1, 1, 1)
-title.Font = Enum.Font.FredokaOne
-
--- ========== SELEÇÃO DE SISTEMA ==========
-
-local systemLabel = Instance.new("TextLabel", frame)
-systemLabel.Size = UDim2.new(0.8, 0, 0, 25)
-systemLabel.Position = UDim2.new(0.1, 0, 0.12, 0)
-systemLabel.Text = "Sistema de Teleporte:"
-systemLabel.TextScaled = true
-systemLabel.BackgroundTransparency = 1
-systemLabel.TextColor3 = Color3.new(1, 1, 1)
-systemLabel.Font = Enum.Font.GothamBold
-
-local system1Btn = Instance.new("TextButton", frame)
-system1Btn.Size = UDim2.new(0.35, 0, 0, 30)
-system1Btn.Position = UDim2.new(0.1, 0, 0.17, 0)
-system1Btn.Text = "11 Locais"
-system1Btn.TextScaled = true
-system1Btn.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
-system1Btn.TextColor3 = Color3.new(1, 1, 1)
-system1Btn.Font = Enum.Font.GothamBold
-
-local system2Btn = Instance.new("TextButton", frame)
-system2Btn.Size = UDim2.new(0.35, 0, 0, 30)
-system2Btn.Position = UDim2.new(0.55, 0, 0.17, 0)
-system2Btn.Text = "4 Locais"
-system2Btn.TextScaled = true
-system2Btn.BackgroundColor3 = Color3.fromRGB(80, 60, 60)
-system2Btn.TextColor3 = Color3.new(1, 1, 1)
-system2Btn.Font = Enum.Font.GothamBold
-
--- ========== SISTEMA AUTO TELEPORT ==========
-
--- Título do Teleport
-local teleportTitle = Instance.new("TextLabel", frame)
-teleportTitle.Size = UDim2.new(0.8, 0, 0, 25)
-teleportTitle.Position = UDim2.new(0.1, 0, 0.25, 0)
-teleportTitle.Text = "🔗 Auto Teleport"
-teleportTitle.TextScaled = true
-teleportTitle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-teleportTitle.TextColor3 = Color3.new(1, 1, 1)
-teleportTitle.Font = Enum.Font.GothamBold
-
--- Botão Auto Teleport
-local autoTeleportBtn = Instance.new("TextButton", frame)
-autoTeleportBtn.Size = UDim2.new(0.8, 0, 0, 40)
-autoTeleportBtn.Position = UDim2.new(0.1, 0, 0.32, 0)
-autoTeleportBtn.Text = "Auto Teleport: OFF"
-autoTeleportBtn.TextScaled = true
-autoTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 50, 50)
-autoTeleportBtn.TextColor3 = Color3.new(1, 1, 1)
-autoTeleportBtn.Font = Enum.Font.GothamBold
-
--- Status do Delay
-local delayLabel = Instance.new("TextLabel", frame)
-delayLabel.Size = UDim2.new(0.8, 0, 0, 25)
-delayLabel.Position = UDim2.new(0.1, 0, 0.4, 0)
-delayLabel.Text = "Delay: 500ms"
-delayLabel.TextScaled = true
-delayLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-delayLabel.TextColor3 = Color3.new(1, 1, 1)
-delayLabel.Font = Enum.Font.Gotham
-
--- Botões de controle do delay
-local delayControls = Instance.new("Frame", frame)
-delayControls.Size = UDim2.new(0.8, 0, 0, 30)
-delayControls.Position = UDim2.new(0.1, 0, 0.45, 0)
-delayControls.BackgroundTransparency = 1
-
-local minusBtn = Instance.new("TextButton", delayControls)
-minusBtn.Size = UDim2.new(0.45, 0, 1, 0)
-minusBtn.Position = UDim2.new(0, 0, 0, 0)
-minusBtn.Text = "- Diminuir"
-minusBtn.TextScaled = true
-minusBtn.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
-minusBtn.TextColor3 = Color3.new(1, 1, 1)
-minusBtn.Font = Enum.Font.GothamBold
-
-local plusBtn = Instance.new("TextButton", delayControls)
-plusBtn.Size = UDim2.new(0.45, 0, 1, 0)
-plusBtn.Position = UDim2.new(0.55, 0, 0, 0)
-plusBtn.Text = "+ Aumentar"
-plusBtn.TextScaled = true
-plusBtn.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
-plusBtn.TextColor3 = Color3.new(1, 1, 1)
-plusBtn.Font = Enum.Font.GothamBold
-
--- Lista de locais ativos
-local locationsLabel = Instance.new("TextLabel", frame)
-locationsLabel.Size = UDim2.new(0.8, 0, 0, 25)
-locationsLabel.Position = UDim2.new(0.1, 0, 0.52, 0)
-locationsLabel.Text = "Locais Ativos:"
-locationsLabel.TextScaled = true
-locationsLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-locationsLabel.TextColor3 = Color3.new(1, 1, 1)
-locationsLabel.Font = Enum.Font.GothamBold
-
--- Frame para lista de locais
-local locationsFrame = Instance.new("ScrollingFrame", frame)
-locationsFrame.Size = UDim2.new(0.8, 0, 0, 150)
-locationsFrame.Position = UDim2.new(0.1, 0, 0.58, 0)
-locationsFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-locationsFrame.BorderSizePixel = 0
-locationsFrame.ScrollBarThickness = 6
-
-local layout = Instance.new("UIListLayout", locationsFrame)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Padding = UDim.new(0, 5)
-
--- Botão de abrir/fechar
-local toggleButton = Instance.new("TextButton", screenGui)
-toggleButton.Size = UDim2.new(0, 120, 0, 40)
-toggleButton.Position = UDim2.new(0, 10, 0, 10)
-toggleButton.Text = "Abrir Painel"
-toggleButton.TextScaled = true
-toggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-toggleButton.TextColor3 = Color3.new(1, 1, 1)
-toggleButton.Font = Enum.Font.GothamBold
-
--- ========== FUNÇÕES DO AUTO TELEPORT ==========
-
--- Função Teleporte (suporta cadeira)
-local function teleportTo(pos)
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
+local function ativarFlyMM2()
+    flyPart = Instance.new("Part")
+    flyPart.Size = Vector3.new(2, 1, 2)
+    flyPart.Transparency = 1
+    flyPart.Anchored = true
+    flyPart.CanCollide = false
+    flyPart.CFrame = humanoidRootPart.CFrame
+    flyPart.Parent = workspace
     
-    local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bodyVelocity.Parent = humanoidRootPart
     
-    if humanoid.SeatPart then
-        local seat = humanoid.SeatPart
-        TweenService:Create(seat, tweenInfo, {CFrame = CFrame.new(pos + Vector3.new(0,3,0))}):Play()
-    else
-        TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(pos + Vector3.new(0,3,0))}):Play()
+    local bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(0, 0, 0)
+    bodyGyro.P = 9e9
+    bodyGyro.Parent = humanoidRootPart
+    
+    flyConnection = RunService.Heartbeat:Connect(function()
+        if not farmAtivado or modoAtual ~= "FlyMM2" then
+            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            return
+        end
+        
+        humanoidRootPart.CFrame = flyPart.CFrame
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    end)
+end
+
+local function desativarFlyMM2()
+    if flyConnection then
+        flyConnection:Disconnect()
+        flyConnection = nil
+    end
+    
+    if flyPart then
+        flyPart:Destroy()
+        flyPart = nil
+    end
+    
+    for _, obj in pairs(humanoidRootPart:GetChildren()) do
+        if obj:IsA("BodyVelocity") or obj:IsA("BodyGyro") then
+            obj:Destroy()
+        end
     end
 end
 
--- Função para atualizar label do delay
-local function updateDelayLabel()
-    delayLabel.Text = "Delay: "..math.floor(autoDelay*1000).."ms"
-end
-
--- Função para atualizar lista de locais
-local function updateLocationsList()
-    -- Limpar lista atual
-    for _, child in ipairs(locationsFrame:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
+-- ========== BUSCAR MOEDAS ==========
+local function encontrarMoedasProximas()
+    local moedas = {}
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj:FindFirstChildOfClass("TouchTransmitter") then
+            
+            local deveIgnorar = false
+            local nomeObj = obj.Name
+            local nomeLower = string.lower(nomeObj)
+            
+            -- FILTRO 1: Nome exato
+            if nomesIgnorados[nomeObj] then
+                deveIgnorar = true
+            end
+            
+            -- FILTRO 2: Nome contém palavras proibidas
+            if string.find(nomeLower, "bound") or 
+               string.find(nomeLower, "node") or
+               string.find(nomeLower, "shop") or
+               string.find(nomeLower, "boost") or
+               string.find(nomeLower, "stamina") or
+               string.find(nomeLower, "speed") or
+               string.find(nomeLower, "slide") then
+                deveIgnorar = true
+            end
+            
+            -- FILTRO 3: Parent proibido
+            if obj.Parent and parentsIgnorados[obj.Parent.Name] then
+                deveIgnorar = true
+            end
+            
+            -- FILTRO 4: Material proibido
+            if materiaisIgnorados[obj.Material] then
+                deveIgnorar = true
+            end
+            
+            -- FILTRO 5: Parent contém "CompetitiveRace"
+            if obj.Parent then
+                local parentLower = string.lower(obj.Parent.Name)
+                if string.find(parentLower, "competitiverace") then
+                    deveIgnorar = true
+                end
+            end
+            
+            if not deveIgnorar and not moedasVisitadas[obj] then
+                local distancia = (humanoidRootPart.Position - obj.Position).Magnitude
+                
+                if distancia <= distanciaMaxima then
+                    table.insert(moedas, {
+                        part = obj,
+                        distancia = distancia,
+                        nome = obj.Name
+                    })
+                end
+            end
         end
     end
     
-    -- Adicionar novos botões
-    for i, teleport in ipairs(currentTeleportSystem) do
-        local locButton = Instance.new("TextButton")
-        locButton.Size = UDim2.new(1, -10, 0, 30)
-        locButton.Text = teleport.name
-        locButton.TextScaled = true
-        locButton.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
-        locButton.TextColor3 = Color3.new(1, 1, 1)
-        locButton.Font = Enum.Font.Gotham
-        locButton.Parent = locationsFrame
+    table.sort(moedas, function(a, b)
+        return a.distancia < b.distancia
+    end)
+    
+    return moedas
+end
+
+-- ========== TELEPORT MODO 1 ==========
+local function teleportModo1(moeda)
+    if not moeda or not moeda.Parent then return end
+    
+    for i = 1, 3 do
+        humanoidRootPart.CFrame = moeda.CFrame
+        task.wait(0.03)
+    end
+    
+    moedasVisitadas[moeda] = true
+end
+
+-- ========== TELEPORT MODO 2 ==========
+local function teleportModo2(moeda)
+    if not moeda or not moeda.Parent then return end
+    
+    local posicoes = {
+        moeda.CFrame * CFrame.new(0, 0, -3),
+        moeda.CFrame * CFrame.new(3, 0, 0),
+        moeda.CFrame * CFrame.new(0, 0, 3),
+        moeda.CFrame * CFrame.new(-3, 0, 0),
+        moeda.CFrame
+    }
+    
+    for _, pos in ipairs(posicoes) do
+        humanoidRootPart.CFrame = pos
+        task.wait(0.05)
+    end
+    
+    moedasVisitadas[moeda] = true
+end
+
+-- ========== FLY MM2 ==========
+local function voarParaMoeda(moeda)
+    if not moeda or not moeda.Parent or not flyPart then return end
+    
+    local destino = moeda.Position
+    local distancia = (flyPart.Position - destino).Magnitude
+    local tempo = distancia / velocidadeFly
+    
+    local tweenInfo = TweenInfo.new(
+        tempo,
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.InOut
+    )
+    
+    local tween = TweenService:Create(flyPart, tweenInfo, {
+        CFrame = CFrame.new(destino)
+    })
+    
+    tween:Play()
+    tween.Completed:Wait()
+    
+    task.wait(0.2)
+    
+    moedasVisitadas[moeda] = true
+end
+
+-- ========== LOOP PRINCIPAL ==========
+local function loopFarmPrincipal()
+    while farmAtivado do
+        local moedas = encontrarMoedasProximas()
         
-        locButton.MouseButton1Click:Connect(function()
-            -- Teleportar para este local 3 vezes
-            for j = 1, 3 do
-                teleportTo(teleport.pos)
+        if #moedas > 0 then
+            local maisProxima = moedas[1].part
+            
+            if modoAtual == "Teleport1" then
+                teleportModo1(maisProxima)
                 task.wait(0.1)
+                
+            elseif modoAtual == "Teleport2" then
+                teleportModo2(maisProxima)
+                task.wait(0.1)
+                
+            elseif modoAtual == "FlyMM2" then
+                voarParaMoeda(maisProxima)
             end
-        end)
-    end
-    
-    -- Ajustar tamanho do canvas
-    locationsFrame.CanvasSize = UDim2.new(0, 0, 0, #currentTeleportSystem * 35)
-end
-
--- Função do Auto Teleport
-local function toggleAutoTeleport()
-    autoTeleporting = not autoTeleporting
-    autoTeleportBtn.Text = "Auto Teleport: "..(autoTeleporting and "ON" or "OFF")
-    
-    if autoTeleporting then
-        autoTeleportBtn.BackgroundColor3 = Color3.fromRGB(50, 80, 50)
-        task.spawn(function()
-            while autoTeleporting do
-                for _, info in ipairs(currentTeleportSystem) do
-                    if not autoTeleporting then break end
-                    -- 3 cliques antes de ir pro próximo
-                    for i=1,3 do
-                        if not autoTeleporting then break end
-                        teleportTo(info.pos)
-                        task.wait(autoDelay)
-                    end
-                end
-            end
-        end)
-    else
-        autoTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 50, 50)
+        else
+            moedasVisitadas = {}
+            task.wait(1)
+        end
+        
+        task.wait()
     end
 end
 
--- Função para trocar sistema de teleporte
-local function switchTeleportSystem(system)
-    currentTeleportSystem = system
-    
-    if system == teleports1 then
-        system1Btn.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
-        system2Btn.BackgroundColor3 = Color3.fromRGB(80, 60, 60)
-    else
-        system1Btn.BackgroundColor3 = Color3.fromRGB(80, 60, 60)
-        system2Btn.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
-    end
-    
-    updateLocationsList()
-    
-    -- Parar auto teleport se estiver ativo
-    if autoTeleporting then
-        toggleAutoTeleport()
-    end
-end
-
--- ========== EVENTOS ==========
-
--- Eventos dos botões de sistema
-system1Btn.MouseButton1Click:Connect(function()
-    switchTeleportSystem(teleports1)
-end)
-
-system2Btn.MouseButton1Click:Connect(function()
-    switchTeleportSystem(teleports2)
-end)
-
--- Eventos dos botões de delay
-minusBtn.MouseButton1Click:Connect(function()
-    autoDelay = math.max(0.1, autoDelay - 0.1) -- mínimo 100ms
-    updateDelayLabel()
-end)
-
-plusBtn.MouseButton1Click:Connect(function()
-    autoDelay = math.min(10, autoDelay + 0.1) -- máximo 10000ms
-    updateDelayLabel()
-end)
-
--- Evento do botão Auto Teleport
-autoTeleportBtn.MouseButton1Click:Connect(function()
-    toggleAutoTeleport()
-end)
-
--- Evento do botão toggle
-toggleButton.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
-    if frame.Visible then
-        toggleButton.Text = "Fechar Painel"
-    else
-        toggleButton.Text = "Abrir Painel"
+-- Limpar cache
+spawn(function()
+    while true do
+        task.wait(tempoCache)
+        moedasVisitadas = {}
     end
 end)
 
--- ========== INICIALIZAÇÃO ==========
+-- ========== CRIAR INTERFACE RAYFIELD ==========
+local Window = Rayfield:CreateWindow({
+    Name = "💰 Farm de Moedas",
+    LoadingTitle = "Farm de Moedas",
+    LoadingSubtitle = "by Você",
+    ConfigurationSaving = {
+        Enabled = false,
+    },
+    Discord = {
+        Enabled = false,
+    },
+    KeySystem = false,
+})
 
--- Inicializar
-updateDelayLabel()
-switchTeleportSystem(teleports1) -- Sistema 1 como padrão
+-- ========== TAB PRINCIPAL ==========
+local MainTab = Window:CreateTab("🏠 Principal", nil)
 
-print("Painel ADM com 2 Sistemas de Teleporte carregado!")
+local StatusSection = MainTab:CreateSection("📊 Status")
+
+-- Label de Status
+local StatusLabel = MainTab:CreateLabel("Status: 🔴 Desligado")
+local ModoLabel = MainTab:CreateLabel("Modo: Nenhum")
+local MoedasLabel = MainTab:CreateLabel("Moedas Encontradas: 0")
+
+-- Atualizar labels
+spawn(function()
+    while task.wait(0.5) do
+        local moedas = encontrarMoedasProximas()
+        MoedasLabel:Set("Moedas Encontradas: " .. #moedas)
+    end
+end)
+
+-- ========== TAB DE MODOS ==========
+local ModosTab = Window:CreateTab("⚙️ Modos de Farm", nil)
+
+local ModosSection = ModosTab:CreateSection("Escolha o Modo")
+
+-- Botão Teleport Modo 1
+local BotaoTeleport1 = ModosTab:CreateButton({
+    Name = "⚡ Teleport Modo 1 (Rápido)",
+    Callback = function()
+        if modoAtual == "Teleport1" and farmAtivado then
+            -- Desligar
+            farmAtivado = false
+            desativarFlyMM2()
+            modoAtual = "Desligado"
+            StatusLabel:Set("Status: 🔴 Desligado")
+            ModoLabel:Set("Modo: Nenhum")
+            Rayfield:Notify({
+                Title = "Farm Desativado",
+                Content = "Teleport Modo 1 desligado",
+                Duration = 3,
+                Image = nil,
+            })
+        else
+            -- Ligar
+            farmAtivado = false
+            desativarFlyMM2()
+            modoAtual = "Teleport1"
+            farmAtivado = true
+            StatusLabel:Set("Status: 🟢 Ativo")
+            ModoLabel:Set("Modo: Teleport Rápido")
+            spawn(loopFarmPrincipal)
+            Rayfield:Notify({
+                Title = "Farm Ativado",
+                Content = "Teleport Modo 1 ligado (3x rápido)",
+                Duration = 3,
+                Image = nil,
+            })
+        end
+    end,
+})
+
+-- Botão Teleport Modo 2
+local BotaoTeleport2 = ModosTab:CreateButton({
+    Name = "🎯 Teleport Modo 2 (Círculo)",
+    Callback = function()
+        if modoAtual == "Teleport2" and farmAtivado then
+            farmAtivado = false
+            desativarFlyMM2()
+            modoAtual = "Desligado"
+            StatusLabel:Set("Status: 🔴 Desligado")
+            ModoLabel:Set("Modo: Nenhum")
+            Rayfield:Notify({
+                Title = "Farm Desativado",
+                Content = "Teleport Modo 2 desligado",
+                Duration = 3,
+                Image = nil,
+            })
+        else
+            farmAtivado = false
+            desativarFlyMM2()
+            modoAtual = "Teleport2"
+            farmAtivado = true
+            StatusLabel:Set("Status: 🟢 Ativo")
+            ModoLabel:Set("Modo: Teleport Círculo")
+            spawn(loopFarmPrincipal)
+            Rayfield:Notify({
+                Title = "Farm Ativado",
+                Content = "Teleport Modo 2 ligado (5 posições)",
+                Duration = 3,
+                Image = nil,
+            })
+        end
+    end,
+})
+
+-- Botão Fly MM2
+local BotaoFlyMM2 = ModosTab:CreateButton({
+    Name = "✈️ Fly MM2 (Voa Suave)",
+    Callback = function()
+        if modoAtual == "FlyMM2" and farmAtivado then
+            farmAtivado = false
+            desativarFlyMM2()
+            modoAtual = "Desligado"
+            StatusLabel:Set("Status: 🔴 Desligado")
+            ModoLabel:Set("Modo: Nenhum")
+            Rayfield:Notify({
+                Title = "Farm Desativado",
+                Content = "Fly MM2 desligado",
+                Duration = 3,
+                Image = nil,
+            })
+        else
+            farmAtivado = false
+            desativarFlyMM2()
+            modoAtual = "FlyMM2"
+            farmAtivado = true
+            ativarFlyMM2()
+            StatusLabel:Set("Status: 🟢 Ativo")
+            ModoLabel:Set("Modo: Fly MM2")
+            spawn(loopFarmPrincipal)
+            Rayfield:Notify({
+                Title = "Farm Ativado",
+                Content = "Fly MM2 ligado (estilo Murder Mystery)",
+                Duration = 3,
+                Image = nil,
+            })
+        end
+    end,
+})
+
+-- ========== TAB DE CONFIGURAÇÕES ==========
+local ConfigTab = Window:CreateTab("⚙️ Configurações", nil)
+
+local ConfigSection = ConfigTab:CreateSection("Ajustes")
+
+-- Slider de Velocidade
+local VelocidadeSlider = ConfigTab:CreateSlider({
+    Name = "⚡ Velocidade do Fly",
+    Range = {1, 500},
+    Increment = 5,
+    CurrentValue = 50,
+    Flag = "VelocidadeFly",
+    Callback = function(Value)
+        velocidadeFly = Value
+        Rayfield:Notify({
+            Title = "Velocidade Alterada",
+            Content = "Velocidade do Fly: " .. Value,
+            Duration = 2,
+            Image = nil,
+        })
+    end,
+})
+
+-- Slider de Distância
+local DistanciaSlider = ConfigTab:CreateSlider({
+    Name = "📏 Distância Máxima",
+    Range = {50, 1000},
+    Increment = 50,
+    CurrentValue = 300,
+    Flag = "DistanciaMaxima",
+    Callback = function(Value)
+        distanciaMaxima = Value
+        Rayfield:Notify({
+            Title = "Distância Alterada",
+            Content = "Distância Máxima: " .. Value .. " studs",
+            Duration = 2,
+            Image = nil,
+        })
+    end,
+})
+
+-- ========== TAB DE INFO ==========
+local InfoTab = Window:CreateTab("ℹ️ Informações", nil)
+
+local InfoSection = InfoTab:CreateSection("🚫 Filtros Ativos")
+
+InfoTab:CreateLabel("Ignora os seguintes nomes:")
+InfoTab:CreateLabel("• Node, Bounds, SlidePart")
+InfoTab:CreateLabel("• ShopInteractionPart")
+InfoTab:CreateLabel("• CompetitiveRace (boosts)")
+InfoTab:CreateLabel("")
+InfoTab:CreateLabel("Ignora Material Glass")
+InfoTab:CreateLabel("")
+
+local ModosInfoSection = InfoTab:CreateSection("📖 Descrição dos Modos")
+
+InfoTab:CreateLabel("⚡ Modo 1: Teleporte direto 3x")
+InfoTab:CreateLabel("   → Mais rápido, pode errar algumas")
+InfoTab:CreateLabel("")
+InfoTab:CreateLabel("🎯 Modo 2: Teleporte em círculo")
+InfoTab:CreateLabel("   → 5 posições ao redor, mais eficiente")
+InfoTab:CreateLabel("")
+InfoTab:CreateLabel("✈️ Fly MM2: Voa suave até moeda")
+InfoTab:CreateLabel("   → Movimento natural estilo Murder Mystery")
+
+-- Botão Desligar Tudo
+local DesligarSection = InfoTab:CreateSection("🔴 Controles")
+
+local BotaoDesligar = InfoTab:CreateButton({
+    Name = "🔴 DESLIGAR TUDO",
+    Callback = function()
+        farmAtivado = false
+        desativarFlyMM2()
+        modoAtual = "Desligado"
+        StatusLabel:Set("Status: 🔴 Desligado")
+        ModoLabel:Set("Modo: Nenhum")
+        Rayfield:Notify({
+            Title = "Tudo Desligado",
+            Content = "Farm completamente desativado",
+            Duration = 3,
+            Image = nil,
+        })
+    end,
+})
+
+-- ========== ATUALIZAR CHARACTER ==========
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoid = character:WaitForChild("Humanoid")
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    
+    farmAtivado = false
+    desativarFlyMM2()
+    modoAtual = "Desligado"
+    StatusLabel:Set("Status: 🔴 Desligado")
+    ModoLabel:Set("Modo: Nenhum")
+end)
+
+-- Notificação inicial
+Rayfield:Notify({
+    Title = "Farm de Moedas Carregado!",
+    Content = "Escolha um modo de farm para começar",
+    Duration = 5,
+    Image = nil,
+})
