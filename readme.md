@@ -1,7 +1,9 @@
+-- Script Farm de Moedas com Interface Rayfield + Anti-AFK (CORRIGIDO)
+-- Coloque no StarterGui ou StarterPlayerScripts
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local VirtualUser = game:InstanceNew("VirtualUser")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -43,13 +45,14 @@ local materiaisIgnorados = {
 local moedasVisitadas = {}
 local tempoCache = 3
 
--- ========== SISTEMA ANTI-AFK ==========
+-- ========== SISTEMA ANTI-AFK (CORRIGIDO) ==========
 local antiAFKConnection
 
 local function ativarAntiAFK()
     if antiAFKConnection then return end
     
     antiAFKConnection = player.Idled:Connect(function()
+        local VirtualUser = game:GetService("VirtualUser")
         VirtualUser:CaptureController()
         VirtualUser:ClickButton2(Vector2.new())
     end)
